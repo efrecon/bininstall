@@ -1,0 +1,43 @@
+name: bin test
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+      - feature/gh-action
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      JQ_GHPROJ: stedolan/jq
+      JQ_RELROOT: https://github.com/${{ env.JQ_GHPROJ}}/releases
+      JQ_APIROOT: https://api.github.com/repos/${{ env.JQ_GHPROJ }}
+      JQ_DWROOT: ${{ env.JQ_RELROOT }}/download
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+
+      -
+        name: Detect Latest
+        id: version
+        run: |
+          printf '::set-output name=version::%s\n' \
+            "$( wget -q -O - "${{ env.JQ_APIROOT }}/releases" |
+                grep -oE '[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"jq-([0-9]+\.[0-9]+)"' |
+                sed -E 's/[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"jq-([0-9]+\.[0-9]+)"/\1/' |
+                head -n 1)"
+      -
+        name: Install
+        uses: ./
+        with:
+          installer: bin
+          binary: jq
+          url: ${{ env.JQ_DWROOT }}/jq-${{ steps.version.outputs.version }}/jq-linux64
+
+      - name: Test
+        run: jq --version

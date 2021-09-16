@@ -1,0 +1,61 @@
+name: "bin/tar installer"
+description: |
+  Quickly download and install direct binaries, or binaries extracted from tar
+  files. This action makes it easy to install fat binaries (statically compiled,
+  such as golang binaries), picked from known github projects, e.g. kubectl, jq,
+  etc.
+author: "Emmanuel Frécon"
+
+inputs:
+  installer:
+    description: |
+      Direct binary, or tar extractor installer. Must be one of bin or tar
+    default: bin
+    required: true
+  url:
+    description: |
+      URL at which to find the binary or tar file to install from
+    default: ""
+    required: true
+  destination:
+    description: Destination directory for downloaded binaries
+    default: ${{ github.workspace }}/bin
+    required: false
+  binary:
+    description: |
+      Name of the binary to place under the destination directory. When empty,
+      this will be the basename of the extraction path.
+    default: ""
+    required: false
+  extract:
+    description: |
+      When the installer type is tar, this is the path, relative the extracted
+      tar where to find the binary to install. When empty, this will be the same
+      as the name of the tar file, without any extension (so .tar.gz, or .tgz
+      removed).
+    default: ""
+    required: false
+
+runs:
+  using: composite
+
+  steps:
+    -
+      name: Create cache directory for binaries
+      shell: bash
+      run: mkdir -p ${{ inputs.destination }}
+    -
+      name: Install in destination directory
+      shell: bash
+      env:
+        TARINSTALL_EXTRACT: ${{ inputs.extract }}
+      run: |
+        ${{ github.action_path }}/${{ inputs.installer }}install.sh \
+          --destination "${{ inputs.destination }}" \
+          --bin "${{ inputs.binary }}" \
+          --verbose \
+          -- \
+            "${{ inputs.url }}"
+    - name: Export to further actions
+      shell: bash
+      run: echo "${{ inputs.destination }}" >> "$GITHUB_PATH"
