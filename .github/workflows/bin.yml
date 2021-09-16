@@ -14,9 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JQ_GHPROJ: stedolan/jq
-      JQ_RELROOT: "https://github.com/${{ env.JQ_GHPROJ }}/releases"
-      JQ_APIROOT: "https://api.github.com/repos/${{ env.JQ_GHPROJ }}"
-      JQ_DWROOT: "${{ env.JQ_RELROOT }}/download"
     steps:
       -
         name: Checkout
@@ -25,6 +22,10 @@ jobs:
       -
         name: Detect Latest
         id: version
+        env:
+          JQ_RELROOT: "https://github.com/${{ env.JQ_GHPROJ }}/releases"
+          JQ_APIROOT: "https://api.github.com/repos/${{ env.JQ_GHPROJ }}"
+          JQ_DWROOT: "${{ env.JQ_RELROOT }}/download"
         run: |
           printf '::set-output name=version::%s\n' \
             "$( wget -q -O - "${{ env.JQ_APIROOT }}/releases" |
@@ -34,6 +35,9 @@ jobs:
       -
         name: Install
         uses: ./
+        env:
+          JQ_RELROOT: "https://github.com/${{ env.JQ_GHPROJ }}/releases"
+          JQ_DWROOT: "${{ env.JQ_RELROOT }}/download"
         with:
           installer: bin
           binary: jq
