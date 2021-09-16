@@ -1,4 +1,4 @@
-# Binary Installers for Dockerfile Automation
+# Binary Installers for Dockerfile Automation and GitHub Actions
 
 This repository contains [utilities](#utilities) to simplify installing
 (released) binaries into Docker images, together with a GitHub
