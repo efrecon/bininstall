@@ -50,7 +50,7 @@ runs:
       env:
         TARINSTALL_EXTRACT: ${{ inputs.extract }}
       run: |
-        ${{ github.action_path }}${{ inputs.installer }}install.sh \
+        ${{ github.action_path }}/${{ inputs.installer }}install.sh \
           --destination "${{ inputs.destination }}" \
           --bin "${{ inputs.binary }}" \
           --verbose \
