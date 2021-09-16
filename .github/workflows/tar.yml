@@ -1,4 +1,4 @@
-name: bin test
+name: tar test
 
 on:
   push:
@@ -28,8 +28,8 @@ jobs:
         run: |
           printf '::set-output name=version::%s\n' \
             "$( wget -q -O - "${{ env.ACT_APIROOT }}/releases" |
-                grep -oE '[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"v([0-9]+\.[0-9]+)"' |
-                sed -E 's/[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"v([0-9]+\.[0-9]+)"/\1/' |
+                grep -oE '[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"v([0-9]+(\.[0-9]+(\.[0-9]+)?)?)"' |
+                sed -E 's/[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"v([0-9]+(\.[0-9]+(\.[0-9]+)?)?)"/\1/' |
                 head -n 1)"
       -
         name: Install
