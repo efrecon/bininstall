@@ -1,0 +1,98 @@
+name: Install Tests
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # Run a binary installer test using the jq project at GitHub, as it makes
+  # available binaries directly when releasing.
+  bin:
+    runs-on: ubuntu-latest
+    env:
+      JQ_GHPROJ: stedolan/jq
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+
+      # Detect the latest version by using the GitHub API to request the list of
+      # known releases
+      -
+        name: Detect Latest
+        id: version
+        env:
+          JQ_APIROOT: "https://api.github.com/repos/${{ env.JQ_GHPROJ }}"
+          JQ_DWROOT: "https://github.com/${{ env.JQ_GHPROJ }}/releases/download"
+        run: |
+          printf '::set-output name=version::%s\n' \
+            "$( wget -q -O - "${{ env.JQ_APIROOT }}/releases" |
+                grep -oE '[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"jq-([0-9]+\.[0-9]+)"' |
+                sed -E 's/[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"jq-([0-9]+\.[0-9]+)"/\1/' |
+                head -n 1)"
+
+      # Install using the action, from the release URL constructed using the
+      # latest version extracted above.
+      -
+        name: Install
+        uses: ./
+        env:
+          JQ_DWROOT: "https://github.com/${{ env.JQ_GHPROJ }}/releases/download"
+        with:
+          installer: bin
+          binary: jq
+          url: ${{ env.JQ_DWROOT }}/jq-${{ steps.version.outputs.version }}/jq-linux64
+
+      # Just run the installed binary, without any access PATH and requesting
+      # its stored version in order to verify that the binary works as it should
+      # and has been made accessible to future steps.
+      - name: Test
+        run: jq --version
+
+  # Run a tar installer test using the act project at GitHub, as it makes
+  # available tar files when releasing.
+  tar:
+    runs-on: ubuntu-latest
+    env:
+      ACT_GHPROJ: nektos/act
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+
+      # Detect the latest version by using the GitHub API to request the list of
+      # known releases
+      -
+        name: Detect Latest
+        id: version
+        env:
+          ACT_APIROOT: "https://api.github.com/repos/${{ env.ACT_GHPROJ }}"
+          ACT_DWROOT: "https://github.com/${{ env.ACT_GHPROJ }}/releases/download"
+        run: |
+          printf '::set-output name=version::%s\n' \
+            "$( wget -q -O - "${{ env.ACT_APIROOT }}/releases" |
+                grep -oE '[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"v([0-9]+(\.[0-9]+(\.[0-9]+)?)?)"' |
+                sed -E 's/[[:space:]]*"tag_name"[[:space:]]*:[[:space:]]*"v([0-9]+(\.[0-9]+(\.[0-9]+)?)?)"/\1/' |
+                head -n 1)"
+
+      # Install using the action, from the release URL constructed using the
+      # latest version extracted above.
+      -
+        name: Install
+        uses: ./
+        env:
+          ACT_DWROOT: "https://github.com/${{ env.ACT_GHPROJ }}/releases/download"
+        with:
+          installer: tar
+          extract: act
+          url: ${{ env.ACT_DWROOT }}/v${{ steps.version.outputs.version }}/act_Linux_x86_64.tar.gz
+
+      # Just run the installed binary, without any access PATH and requesting
+      # its stored version in order to verify that the binary works as it should
+      # and has been made accessible to future steps.
+      - name: Test
+        run: act --version
