@@ -1,0 +1,5 @@
+# Ignore vscode, adapted from https://github.com/github/gitignore
+.vscode/*
+!.vscode/extensions.json
+*.code-workspace
+.history/
