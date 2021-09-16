@@ -14,9 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JQ_GHPROJ: stedolan/jq
-      JQ_RELROOT: https://github.com/${{ env.JQ_GHPROJ}}/releases
-      JQ_APIROOT: https://api.github.com/repos/${{ env.JQ_GHPROJ }}
-      JQ_DWROOT: ${{ env.JQ_RELROOT }}/download
+      JQ_RELROOT: "https://github.com/${{ env.JQ_GHPROJ }}/releases"
+      JQ_APIROOT: "https://api.github.com/repos/${{ env.JQ_GHPROJ }}"
+      JQ_DWROOT: "${{ env.JQ_RELROOT }}/download"
     steps:
       -
         name: Checkout
