@@ -1,12 +1,19 @@
 # Binary Installers for Dockerfile Automation
 
-This repository contains utilities to simplify installing (released) binaries
-into Docker images. These utilities can be used for other installation
-purposese, but they are meant to replace common code blocks that will fetch
-binaries/tar files from released github (or gitlab) projects and install them
-directly into an target image.
+This repository contains [utilities](#utilities) to simplify installing
+(released) binaries into Docker images, together with a GitHub
+[action](#github-action) that can achieve the same thing. When used as a GitHub
+action, the installed binaries are made available under the `PATH` for being
+used in future steps.
 
-## Binary Installer
+These utilities can be used for other installation purposes, but they are
+meant to replace common code blocks that will fetch binaries/tar files from
+released github (or gitlab) projects and install them directly into a target
+image.
+
+## Utilities
+
+### Binary Installer
 
 The following command would install v1.21.0 of the `kubectl` kubernetes CLI
 client to `/usr/local/bin`, printing some progress that will be relayed during
@@ -33,7 +40,7 @@ options are:
 You can, also it is pedantic since URLs cannot start with a dash, separate the
 options from the argument using a double dash, i.e. `--`.
 
-## Tar Installer
+### Tar Installer
 
 The following command would extract the binary named `krew-linux_amd64` from the
 extract tar of the latest release of `krew`, and install it as `kubectl-krew` in
@@ -62,3 +69,20 @@ options are:
   destination directory. When empty, the default, it will be the basename of the
   extraction path from the `--extract` option.
 * `-v`, or `--verbose` will increase verbosity.
+
+## GitHub Action
+
+The action will relay the [binary](#binary-installer) installer (when the value
+of the `installer` input is exactly `bin`) or the [tar](#tar-installer)
+installer (when the value of the `installer` input is exactly `tar`). For other
+inputs, see [action.yml](./action.yml). The action will modify the `PATH` so
+that the installed binary will be made available in future steps of your job.
+
+For usage examples, look at the [test](.github/workflows/test.yml) workflow. The
+workflow installs binaries from two GitHub projects:
+
+* `jq` makes available its binaries directly when [releasing][jq].
+* `act` makes available tar files when [releasing][act]
+
+  [jq]: https://github.com/stedolan/jq/releases
+  [act]: https://github.com/nektos/act/releases
