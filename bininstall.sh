@@ -7,6 +7,11 @@ BININSTALL_DESTDIR=${BININSTALL_DESTDIR:-"/usr/local/bin"}
 # default, this will be the basename of the installation URL.
 BININSTALL_BIN=${BININSTALL_BIN:-""}
 
+# Period to keep destination binary in cache without even triggering a download
+# attempt. Default to 0, always download. This can be a human-readable period
+# such as 3d (3 days), etc.
+BININSTALL_KEEP=${BININSTALL_KEEP:-0}
+
 # Set this to 1 for increased verbosity
 BININSTALL_VERBOSE=${BININSTALL_VERBOSE:-0}
 
@@ -21,6 +26,11 @@ while [ $# -gt 0 ]; do
       BININSTALL_BIN=$2; shift 2;;
     --bin=* | --binary=*)
       BININSTALL_BIN="${1#*=}"; shift 1;;
+
+    -k | --keep)
+      BININSTALL_KEEP=$2; shift 2;;
+    --keep=*)
+      BININSTALL_KEEP="${1#*=}"; shift 1;;
 
     -v | --verbose)
       BININSTALL_VERBOSE=1; shift;;
@@ -37,9 +47,17 @@ done
 verbose() {
   [ "$BININSTALL_VERBOSE" = "1" ] && printf %s\\n "$1" >&2
 }
-errlog() {
+
+doexit() {
+  if [ -z "$TMPD" ] && [ -d "$TMPD" ]; then
+    verbose "Cleaning $TMPD"
+    rm -rf "$TMPD"
+  fi
+
   printf %s\\n "$1" >&2
+  exit 1
 }
+
 download() {
   verbose "Downloading $1"
   if command -v curl >&2 >/dev/null; then
@@ -47,29 +65,98 @@ download() {
   elif command -v wget >&2 >/dev/null; then
     wget -q -O - "$1" > "$2"
   else
-    errlog "Can neither find curl, nor wget for downloading"
-    return 1
+    doexit "Can neither find curl, nor wget for downloading"
   fi
 }
 
+# Return the approx. number of seconds for the human-readable period passed as a
+# parameter
+howlong() {
+  # shellcheck disable=SC3043 # local is implemented in most shells
+  local len || true
+  if printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*[yY]'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*[yY].*/\1/p')
+    # shellcheck disable=SC2003
+    expr "$len" \* 31536000
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*[Mm][Oo]'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*[Mm][Oo].*/\1/p')
+    # shellcheck disable=SC2003
+    expr "$len" \* 2592000
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*[Mm][Ii]'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*[Mm][Ii].*/\1/p')
+    # shellcheck disable=SC2003
+    expr "$len" \* 60
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*m'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*m.*/\1/p')
+    # shellcheck disable=SC2003
+    expr "$len" \* 2592000
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*[Ww]'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*[Ww].*/\1/p')
+    # shellcheck disable=SC2003
+    expr "$len" \* 604800
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*[Dd]'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*[Dd].*/\1/p')
+    # shellcheck disable=SC2003
+    expr "$len" \* 86400
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*[Hh]'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*[Hh].*/\1/p')
+    # shellcheck disable=SC2003
+    expr "$len" \* 3600
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*M'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*M.*/\1/p')
+    # shellcheck disable=SC2003
+    expr "$len" \* 60
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+[[:space:]]*[Ss]'; then
+    len=$(printf %s\\n "$1"  | sed -En 's/([0-9]+)[[:space:]]*[Ss].*/\1/p')
+    echo "$len"
+  elif printf %s\\n "$1"|grep -Eqo '^[0-9]+'; then
+    printf %s\\n "$1"
+  fi
+}
+
+bininstall() {
+  TMPD=$(mktemp -d)
+  download "$1" "${TMPD}/${BININSTALL_BIN}"
+  if ! [ -f "${TMPD}/${BININSTALL_BIN}" ]; then
+    doexit "Could not download from $1 to ${TMPD}/${BININSTALL_BIN}"
+  fi
+  chmod a+x "${TMPD}/${BININSTALL_BIN}"
+  verbose "Installing as ${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"
+  mv -f "${TMPD}/${BININSTALL_BIN}" "${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN}"
+  rm -rf "$TMPD"
+}
+
+# No temporary directory at start, will be created as soon as have to download
+# something.
+TMPD=
 if [ "$#" != "1" ]; then
-  errlog "You must specify a URL to install from!"
-  exit 1
+  doexit "You must specify a URL to install from!"
 fi
 
 [ -z "$BININSTALL_BIN" ] && BININSTALL_BIN=$(basename "$1")
 
-
-TMPDIR=$(mktemp -d)
-download "$1" "${TMPDIR}/${BININSTALL_BIN}"
-if ! [ -f "${TMPDIR}/${BININSTALL_BIN}" ]; then
-  errlog "Could not download from $1 to ${TMPDIR}/${BININSTALL_BIN}"
-  exit 1
+BININSTALL_KEEP=$(howlong "$BININSTALL_KEEP")
+if [ -f "${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN}" ]; then
+  if [ -n "$BININSTALL_KEEP" ] && [ "$BININSTALL_KEEP" -gt "0" ]; then
+    last=$(stat -c "%Z" "${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN}")
+    # Get the current number of seconds since the epoch, POSIX compliant:
+    # https://stackoverflow.com/a/12746260
+    now=$(PATH=$(getconf PATH) awk 'BEGIN{srand();print srand()}')
+    elapsed=$(( now - last ))
+    if [ "$elapsed" -gt "$BININSTALL_KEEP" ]; then
+      verbose "File at ${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN} $elapsed secs. (too) old, installing again."
+      bininstall "$1"
+    else
+      verbose "File at ${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN} $elapsed secs. old, keeping."
+    fi
+  else
+    verbose "Cache time $BININSTALL_KEEP negative (or invalid), installing"
+    bininstall "$1"
+  fi
+else
+  verbose "No file at ${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN}, installing"
+  bininstall "$1"
 fi
-chmod a+x "${TMPDIR}/${BININSTALL_BIN}"
-verbose "Installing as ${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"
-mv -f "${TMPDIR}/${BININSTALL_BIN}" "${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"
-rm -rf "$TMPDIR"
 
 # Print location of installed binary
-printf %s\\n "${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"
+[ -f "${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN}" ] && printf %s\\n "${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN}"
