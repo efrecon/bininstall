@@ -15,6 +15,20 @@ BININSTALL_KEEP=${BININSTALL_KEEP:-0}
 # Set this to 1 for increased verbosity
 BININSTALL_VERBOSE=${BININSTALL_VERBOSE:-0}
 
+verbose() {
+  [ "$BININSTALL_VERBOSE" = "1" ] && printf %s\\n "$1" >&2
+}
+
+doexit() {
+  if [ -z "${TMPD:-}" ] && [ -d "$TMPD" ]; then
+    verbose "Cleaning $TMPD"
+    rm -rf "$TMPD"
+  fi
+
+  printf %s\\n "$1" >&2
+  exit 1
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     -d | --dest | --destination)
@@ -38,25 +52,11 @@ while [ $# -gt 0 ]; do
     --)
       shift; break;;
     -*)
-      usage "Unknown option: $1 !";;
+      doexit "Unknown option: $1 !";;
     *)
       break;;
   esac
 done
-
-verbose() {
-  [ "$BININSTALL_VERBOSE" = "1" ] && printf %s\\n "$1" >&2
-}
-
-doexit() {
-  if [ -z "$TMPD" ] && [ -d "$TMPD" ]; then
-    verbose "Cleaning $TMPD"
-    rm -rf "$TMPD"
-  fi
-
-  printf %s\\n "$1" >&2
-  exit 1
-}
 
 download() {
   verbose "Downloading $1"
@@ -117,13 +117,17 @@ howlong() {
 bininstall() {
   TMPD=$(mktemp -d)
   download "$1" "${TMPD}/${BININSTALL_BIN}"
-  if ! [ -f "${TMPD}/${BININSTALL_BIN}" ]; then
+
+  # If we had a downloaded file, install it into the destination directory with
+  # the proper name.
+  if [ -f "${TMPD}/${BININSTALL_BIN}" ]; then
+    chmod a+x "${TMPD}/${BININSTALL_BIN}"
+    verbose "Installing as ${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"
+    mv -f "${TMPD}/${BININSTALL_BIN}" "${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN}"
+    rm -rf "$TMPD"
+  else
     doexit "Could not download from $1 to ${TMPD}/${BININSTALL_BIN}"
   fi
-  chmod a+x "${TMPD}/${BININSTALL_BIN}"
-  verbose "Installing as ${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"
-  mv -f "${TMPD}/${BININSTALL_BIN}" "${BININSTALL_DESTDIR%%*/}/${BININSTALL_BIN}"
-  rm -rf "$TMPD"
 }
 
 # No temporary directory at start, will be created as soon as have to download
