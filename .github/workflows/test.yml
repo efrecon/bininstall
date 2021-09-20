@@ -6,6 +6,7 @@ on:
       - '*'
     branches:
       - main
+      - feature/cache
   workflow_dispatch:
 
 jobs:
