@@ -87,6 +87,9 @@ if [ -f "${TMPDIR}/${TARINSTALL_EXTRACT}" ]; then
   verbose "Installing as ${TARINSTALL_DESTDIR%/}/${TARINSTALL_BIN}"
   mv -f "${TMPDIR}/${TARINSTALL_EXTRACT}" "${TARINSTALL_DESTDIR%/}/${TARINSTALL_BIN}"
   rm -rf "$TMPDIR"
+
+  # Print location of installed binary
+  printf %s\\n "${TARINSTALL_DESTDIR%/}/${TARINSTALL_BIN}"
 else
   errlog "Could not find ${TMPDIR}/${TARINSTALL_EXTRACT}"
   exit 1

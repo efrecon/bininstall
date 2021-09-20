@@ -70,3 +70,6 @@ chmod a+x "${TMPDIR}/${BININSTALL_BIN}"
 verbose "Installing as ${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"
 mv -f "${TMPDIR}/${BININSTALL_BIN}" "${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"
 rm -rf "$TMPDIR"
+
+# Print location of installed binary
+printf %s\\n "${BININSTALL_DESTDIR%/}/${BININSTALL_BIN}"

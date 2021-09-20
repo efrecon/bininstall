@@ -4,7 +4,7 @@ description: |
   files. This action makes it easy to install fat binaries (statically compiled,
   such as golang binaries), picked from known github projects, e.g. kubectl, jq,
   etc.
-author: "Emmanuel Frécon"
+author: "Emmanuel Frécon <efrecon+github@gmail.com>"
 
 inputs:
   installer:
@@ -36,26 +36,45 @@ inputs:
     default: ""
     required: false
 
+outputs:
+  path:
+    description: Location of the installed binary, empty on errors.
+    value: ${{ steps.install.outputs.path }}
+
 runs:
   using: composite
 
   steps:
+    # Create bin directory to store downloaded binary into.
     -
       name: Create cache directory for binaries
       shell: bash
       run: mkdir -p ${{ inputs.destination }}
+
+    # Run bininstall.sh or tarinstall.sh with values from the inputs. Both
+    # scripts share almost the same set of command-line options on purpose. Give
+    # tar-specific information via an environment variables as there is no `if`
+    # key in composite actions. Set the output field called path with the result
+    # of the install, i.e. the location of the binary on disk, unless something
+    # wrong happened.
     -
       name: Install in destination directory
+      id: install
       shell: bash
       env:
         TARINSTALL_EXTRACT: ${{ inputs.extract }}
       run: |
-        ${{ github.action_path }}/${{ inputs.installer }}install.sh \
-          --destination "${{ inputs.destination }}" \
-          --bin "${{ inputs.binary }}" \
-          --verbose \
-          -- \
-            "${{ inputs.url }}"
-    - name: Export to further actions
+        printf '::set-output name=path::%s\n' \
+          "$( ${{ github.action_path }}/${{ inputs.installer }}install.sh \
+                --destination "${{ inputs.destination }}" \
+                --bin "${{ inputs.binary }}" \
+                --verbose \
+                -- \
+                  "${{ inputs.url }}" )"
+
+    # Export destination directory into the PATH so callers will be able to call
+    # the binary directly without accessing it via the value of the path output.
+    -
+      name: Export to further actions
       shell: bash
       run: echo "${{ inputs.destination }}" >> "$GITHUB_PATH"
