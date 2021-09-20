@@ -39,6 +39,7 @@ jobs:
       # latest version extracted above.
       -
         name: Install
+        id: install
         uses: ./
         env:
           JQ_DWROOT: "https://github.com/${{ env.JQ_GHPROJ }}/releases/download"
@@ -51,7 +52,9 @@ jobs:
       # its stored version in order to verify that the binary works as it should
       # and has been made accessible to future steps.
       - name: Test
-        run: jq --version
+        run: |
+          echo "jq installed at: ${{ steps.install.outputs.path }}"
+          jq --version
 
   # Run a tar installer test using the act project at GitHub, as it makes
   # available tar files when releasing.
@@ -83,6 +86,7 @@ jobs:
       # latest version extracted above.
       -
         name: Install
+        id: install
         uses: ./
         env:
           ACT_DWROOT: "https://github.com/${{ env.ACT_GHPROJ }}/releases/download"
@@ -95,4 +99,6 @@ jobs:
       # its stored version in order to verify that the binary works as it should
       # and has been made accessible to future steps.
       - name: Test
-        run: act --version
+        run: |
+          echo "act installed at: ${{ steps.install.outputs.path }}"
+          act --version
