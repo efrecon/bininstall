@@ -48,6 +48,16 @@ jobs:
           binary: jq
           url: ${{ env.JQ_DWROOT }}/jq-${{ steps.version.outputs.version }}/jq-linux64
 
+      -
+        name: Install2
+        uses: ./
+        env:
+          JQ_DWROOT: "https://github.com/${{ env.JQ_GHPROJ }}/releases/download"
+        with:
+          installer: bin
+          binary: jq
+          url: ${{ env.JQ_DWROOT }}/jq-${{ steps.version.outputs.version }}/jq-linux64
+
       # Just run the installed binary, without any access PATH and requesting
       # its stored version in order to verify that the binary works as it should
       # and has been made accessible to future steps.
