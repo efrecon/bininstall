@@ -86,3 +86,16 @@ workflow installs binaries from two GitHub projects:
 
   [jq]: https://github.com/stedolan/jq/releases
   [act]: https://github.com/nektos/act/releases
+
+### Caching
+
+By default, the action will download binaries into the tool cache, per
+repository and runner. This is to give a chance to binaries to pertain over
+time. If you want to keep binaries per workspace, you can provide use the
+following snippet instead. This will ensure that binaries are removed prior
+starting a workflow, thus bypassing most of the caching mechanisms.
+
+```yaml
+with:
+  destination: ${{ github.workspace }}/bin
+```

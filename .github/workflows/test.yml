@@ -48,6 +48,7 @@ jobs:
           binary: jq
           url: ${{ env.JQ_DWROOT }}/jq-${{ steps.version.outputs.version }}/jq-linux64
 
+      # Install again, this should not trigger a download again.
       -
         name: Install2
         uses: ./

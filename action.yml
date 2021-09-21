@@ -19,7 +19,7 @@ inputs:
     required: true
   destination:
     description: Destination directory for downloaded binaries
-    default: ${{ github.workspace }}/bin
+    default: ${{ runner.tool_cache }}/${{ github.repository }}
     required: false
   binary:
     description: |
