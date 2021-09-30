@@ -68,6 +68,11 @@ options are:
 * `-b`, or `--bin` or `--binary` is the name of the binary to be placed in the
   destination directory. When empty, the default, it will be the basename of the
   extraction path from the `--extract` option.
+* `-p` or `--package` is the path to a directory where to store the entire
+  content of the tar file upon installation. The directory will be created if
+  necessary. When the value of this input is not an empty string, a symbolic
+  link to the binary will be created from the 'destination' directory (with the
+  name 'binary') towards the (relative) path 'extract' under 'package'.
 * `-v`, or `--verbose` will increase verbosity.
 
 ## GitHub Action
@@ -86,6 +91,15 @@ workflow installs binaries from two GitHub projects:
 
   [jq]: https://github.com/stedolan/jq/releases
   [act]: https://github.com/nektos/act/releases
+
+If you want to make use of the `package` input in an optimal way, you should
+pertain the content of tar files over time through giving it the following
+value (see note on [caching](#caching) below).
+
+```yaml
+with:
+  package: ${{ runner.tool_cache }}/${{ github.repository }}/opt
+```
 
 ### Caching
 
