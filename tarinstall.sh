@@ -18,6 +18,13 @@ TARINSTALL_BIN=${TARINSTALL_BIN:-""}
 # such as 3d (3 days), etc.
 TARINSTALL_KEEP=${TARINSTALL_KEEP:-0}
 
+# Path to a directory where the content of the tar file will be unpacked and
+# **KEPT** after installation. When this isn't an empty string, the binary will
+# be linked from the destination directory into this package directory. This is
+# useful for installing binaries that cannot run without a number of sibling
+# files, e.g. configuration, dynamic libraries, etc.
+TARINSTALL_PACKAGE=${TARINSTALL_PACKAGE:-}
+
 # Set this to 1 for increased verbosity
 TARINSTALL_VERBOSE=${TARINSTALL_VERBOSE:-0}
 
@@ -51,6 +58,11 @@ while [ $# -gt 0 ]; do
       TARINSTALL_EXTRACT=$2; shift 2;;
     --extract=*)
       TARINSTALL_EXTRACT="${1#*=}"; shift 1;;
+
+    -p | --package)
+      TARINSTALL_PACKAGE=$2; shift 2;;
+    --package=*)
+      TARINSTALL_PACKAGE="${1#*=}"; shift 1;;
 
     -k | --keep)
       TARINSTALL_KEEP=$2; shift 2;;
@@ -138,15 +150,27 @@ tarinstall() {
   # the path to the installed binary)
   taropts="xf"
   [ "$TARINSTALL_VERBOSE" = "1" ] && taropts="xvf"
-  tar -C "${TMPD}" -${taropts} "${TMPD}/${TARNAME}" 1>&2
+  if [ -z "$TARINSTALL_PACKAGE" ]; then
+    _dstdir=${TMPD}
+  else
+    _dstdir=${TARINSTALL_PACKAGE%%*/}
+  fi
+  mkdir -p "$_dstdir"
+  tar -C "$_dstdir" -${taropts} "${TMPD}/${TARNAME}" 1>&2
+  rm -f "${TMPD}/${TARNAME}"
 
   # If we had an extracted file, install it into the destination directory with
   # the proper name.
-  if [ -f "${TMPD}/${TARINSTALL_EXTRACT}" ]; then
-    chmod a+x "${TMPD}/${TARINSTALL_EXTRACT}"
-    verbose "Installing as ${TARINSTALL_DESTDIR%%*/}/${TARINSTALL_BIN}"
-    mv -f "${TMPD}/${TARINSTALL_EXTRACT}" "${TARINSTALL_DESTDIR%%*/}/${TARINSTALL_BIN}"
-    rm -rf "$TMPD"
+  if [ -f "${_dstdir}/${TARINSTALL_EXTRACT}" ]; then
+    chmod a+x "${_dstdir}/${TARINSTALL_EXTRACT}"
+    if [ -z "$TARINSTALL_PACKAGE" ]; then
+      verbose "Installing as ${TARINSTALL_DESTDIR%%*/}/${TARINSTALL_BIN}"
+      mv -f "${TMPD}/${TARINSTALL_EXTRACT}" "${TARINSTALL_DESTDIR%%*/}/${TARINSTALL_BIN}"
+      rm -rf "$TMPD"
+    else
+      verbose "Installing as ${TARINSTALL_DESTDIR%%*/}/${TARINSTALL_BIN}, linked into package at ${TARINSTALL_PACKAGE%%*/}"
+      ln -sf "${TARINSTALL_PACKAGE%%*/}/${TARINSTALL_EXTRACT}" "${TARINSTALL_DESTDIR%%*/}/${TARINSTALL_BIN}"
+    fi
   else
     doexit "Could not find ${TMPD}/${TARINSTALL_EXTRACT}"
   fi

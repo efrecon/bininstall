@@ -3,7 +3,9 @@ description: |
   Quickly download and install direct binaries, or binaries extracted from tar
   files. This action makes it easy to install fat binaries (statically compiled,
   such as golang binaries), picked from known github projects, e.g. kubectl, jq,
-  etc.
+  etc. The destination directory where the binaries are installed (or made
+  available from) is automatically added to the PATH, so that the binaries are
+  automatically made available to other steps.
 author: "Emmanuel Frécon <efrecon+github@gmail.com>"
 
 inputs:
@@ -44,6 +46,15 @@ inputs:
       is to keep binaries for one day.
     default: 1d
     required: false
+  package:
+    description: |
+      Path to a directory where to store the entire content of the tar file upon
+      installation. The directory will be created if necessary. When the value
+      of this input is not an empty string, a symbolic link to the binary will
+      be created from the 'destination' directory (with the name 'binary')
+      towards the (relative) path 'extract' under 'package'.
+    default: ""
+    required: false
 
 outputs:
   path:
@@ -72,6 +83,7 @@ runs:
       shell: bash
       env:
         TARINSTALL_EXTRACT: ${{ inputs.extract }}
+        TARINSTALL_PACKAGE: ${{ inputs.package }}
       run: |
         printf '::set-output name=path::%s\n' \
           "$( ${{ github.action_path }}/${{ inputs.installer }}install.sh \
